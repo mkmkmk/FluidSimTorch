@@ -1,15 +1,3 @@
-# pip install future
-# pip install imageio
-
-# from __future__ import absolute_import
-# from __future__ import print_function
-# from builtins import range
-# import autograd.numpy as np
-# from autograd import value_and_grad
-#
-# from scipy.optimize import minimize
-# #from scipy.misc import imread
-
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -25,9 +13,6 @@ import matplotlib.pyplot as plt
 import os
 from numpy import dtype
 
-#import sys
-#sys.path.append("..")
-
 # Fluid simulation code based on
 # "Real-Time Fluid Dynamics for Games" by Jos Stam
 # http://www.intpowertechcorp.com/GDC03.pdf
@@ -38,15 +23,7 @@ def project(vx, vy):
     # p = np.zeros(vx.shape)
     p = torch.zeros(vx.shape, dtype=torch.float, device=device)
     h = 1.0/vx.shape[0]
-    
-    # div = -0.5 * h * (np.roll(vx, -1, axis=0) - np.roll(vx, 1, axis=0)
-    #                 + np.roll(vy, -1, axis=1) - np.roll(vy, 1, axis=1))
-    # for k in range(10):
-    #     p = (div + np.roll(p, 1, axis=0) + np.roll(p, -1, axis=0)
-    #              + np.roll(p, 1, axis=1) + np.roll(p, -1, axis=1))/4.0
-    # vx -= 0.5*(np.roll(p, -1, axis=0) - np.roll(p, 1, axis=0))/h
-    # vy -= 0.5*(np.roll(p, -1, axis=1) - np.roll(p, 1, axis=1))/h
-    
+
     div = -0.5 * h * (torch.roll(vx, -1, dims=0) - torch.roll(vx, 1, dims=0)
                     + torch.roll(vy, -1, dims=1) - torch.roll(vy, 1, dims=1))
 
@@ -64,29 +41,16 @@ def advect(f, vx, vy):
     """Move field f according to x and y velocities (u and v)
        using an implicit Euler integrator."""
     rows, cols = f.shape
-    # cell_ys, cell_xs = np.meshgrid(np.arange(rows), np.arange(cols))
-    # center_xs = (cell_xs - vx).ravel()
-    # center_ys = (cell_ys - vy).ravel()
-    # cell_ys, cell_xs = torch.tensor(np.meshgrid(np.arange(rows), np.arange(cols)))
     cell_ys, cell_xs  = torch.meshgrid(torch.arange(rows), torch.arange(cols), indexing='xy')
     
     center_xs = torch.ravel(cell_xs - vx)
     center_ys = torch.ravel(cell_ys - vy)
-
-    # Compute indices of source cells.
-    # left_ix = np.floor(center_xs).astype(int)
-    # top_ix  = np.floor(center_ys).astype(int)
 
     left_ix = torch.floor(center_xs).to(torch.int64)
     top_ix  = torch.floor(center_ys).to(torch.int64)
     
     rw = center_xs - left_ix              # Relative weight of right-hand cells.
     bw = center_ys - top_ix               # Relative weight of bottom cells.
-    
-    # left_ix  = np.mod(left_ix,     rows)  # Wrap around edges of simulation.
-    # right_ix = np.mod(left_ix + 1, rows)
-    # top_ix   = np.mod(top_ix,      cols)
-    # bot_ix   = np.mod(top_ix  + 1, cols)
 
     left_ix  = torch.remainder(left_ix,     rows)  # Wrap around edges of simulation.
     right_ix = torch.remainder(left_ix + 1, rows)
@@ -97,7 +61,6 @@ def advect(f, vx, vy):
     flat_f = (1 - rw) * ((1 - bw)*f[left_ix,  top_ix] + bw*f[left_ix,  bot_ix]) \
                  + rw * ((1 - bw)*f[right_ix, top_ix] + bw*f[right_ix, bot_ix])
                 
-    # return np.reshape(flat_f, (rows, cols))
     return torch.reshape(flat_f, (rows, cols))
                  
 
@@ -138,14 +101,12 @@ class FluidModel(nn.Module):
         
 
 
-
 if __name__ == '__main__':
 
     simulation_timesteps = 100
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = 'cpu'
-
 
     try:
        basepath = os.path.dirname(__file__)
@@ -186,50 +147,27 @@ if __name__ == '__main__':
         vy = torch.tensor(vy, requires_grad=True, dtype=torch.float, device=device)
         return vx, vy
 
-    # def objective(params):
-    #     init_vx, init_vy = convert_param_vector_to_matrices(params)
-    #     final_smoke = simulate(init_vx, init_vy, init_smoke, simulation_timesteps)
-    #     return distance_from_target_image(final_smoke)
-
-    # Specify gradient of objective function using autograd.
-    # objective_with_grad = value_and_grad(objective)
-
 
     init_vx, init_vy = convert_param_vector_to_matrices(init_dx_and_dy)
     
-    # init_vx_tensor = torch.from_numpy(init_vx).float().to(device)
-    # init_vy_tensor = torch.from_numpy(init_vy).float().to(device)
-    # a = torch.randn(1, requires_grad=True, dtype=torch.float, device=device)
-    # b = torch.randn(1, requires_grad=True, dtype=torch.float, device=device)
-
     model = FluidModel(init_vx, init_vy, simulation_timesteps)
-
-    # final_smoke = simulate(init_vx, init_vy, init_smoke, simulation_timesteps)
-    # final_smoke = model(init_smoke)
 
     lr = 1e-2
 
     # TODO conjugate gradient algorithm.
     optimizer = optim.SGD(model.parameters(), lr=lr)
 
-
     if False:
         vx = init_vx
         vy = init_vy
         advect(vx, vx, vy)
-    
         smoke = init_smoke
         loss = distance_from_target_image(final_smoke)
-       
-
+        final_smoke = simulate(init_vx, init_vy, init_smoke, simulation_timesteps)
+        final_smoke = model(init_smoke)
 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, frameon=False)
-
-
-    # def callback(params):
-    #     init_vx, init_vy = convert_param_vector_to_matrices(params)
-    #     simulate(init_vx, init_vy, init_smoke, simulation_timesteps, ax)
 
     print("Optimizing initial conditions...")
     # result = minimize(objective_with_grad, init_dx_and_dy, jac=True, method='CG',
@@ -245,7 +183,6 @@ if __name__ == '__main__':
         if k % 10 == 1:
            with torch.no_grad():
                simulate(model.init_vx.clone(), model.init_vy.clone(), init_smoke.clone(), simulation_timesteps, ax)
-
  
     print("Rendering optimized flow...")
     
@@ -253,8 +190,6 @@ if __name__ == '__main__':
         simulate(model.init_vx.clone(), model.init_vy.clone(), init_smoke.clone(), simulation_timesteps, ax, render=True)
 
     print("Converting frames to an animated GIF...")
-    #os.system("convert -delay 5 -loop 0 step*.png"
-    #          " -delay 250 step100.png surprise.gif")  # Using imagemagick.
     
     os.system("convert -delay 5 -loop 0 step*.png -delay 250 result.gif")  # Using imagemagick.
 
