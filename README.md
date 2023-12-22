@@ -10,6 +10,6 @@
 
 
 
-**[Try here](https://mkmkmk.github.io/FluidSimTorch/index.html)**
+**[Project page](https://mkmkmk.github.io/FluidSimTorch/index.html)**
 
 
