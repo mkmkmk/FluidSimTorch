@@ -75,6 +75,7 @@ def simulate(vx, vy, smoke, num_time_steps, ax=None, render=False):
     if ax: plot_matrix(ax, smoke.detach().numpy(), num_time_steps, render)
     return smoke
 
+
 def plot_matrix(ax, mat, t, render=False):
     plt.cla()
     ax.matshow(mat, cmap="Blues" )
@@ -87,7 +88,6 @@ def plot_matrix(ax, mat, t, render=False):
 
 
 class FluidModel(nn.Module):
-    
     def __init__(self, init_vx, init_vy, num_time_steps):
         super(FluidModel, self).__init__()
                 
@@ -132,7 +132,6 @@ if __name__ == '__main__':
     target = np.array(target)
     target = torch.tensor(target, dtype=torch.float, device=device)
     
-    
     rows, cols = target.shape
 
     init_dx_and_dy = np.zeros((2, rows, cols)).ravel()
@@ -146,7 +145,6 @@ if __name__ == '__main__':
         vx = torch.tensor(vx, requires_grad=True, dtype=torch.float, device=device)
         vy = torch.tensor(vy, requires_grad=True, dtype=torch.float, device=device)
         return vx, vy
-
 
     init_vx, init_vy = convert_param_vector_to_matrices(init_dx_and_dy)
     
@@ -180,7 +178,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        if k % 10 == 1:
+        if k % 10 == 9:
            with torch.no_grad():
                simulate(model.init_vx.clone(), model.init_vy.clone(), init_smoke.clone(), simulation_timesteps, ax)
  
